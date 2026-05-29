@@ -1,0 +1,20 @@
+[Unit]
+Description=job-hunter automated job hunting engine
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/job-hunter start
+ExecStop=%h/.local/bin/job-hunter stop
+Restart=on-failure
+RestartSec=10
+Environment=HOME=%h
+Environment=XDG_RUNTIME_DIR=%t
+
+# Limit restarts to avoid busy-looping on permanent failure
+StartLimitInterval=600
+StartLimitBurst=5
+
+[Install]
+WantedBy=default.target

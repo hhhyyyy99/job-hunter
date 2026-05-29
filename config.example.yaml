@@ -1,0 +1,104 @@
+# 简历与搜索偏好
+resume: "默认简历"
+
+presets:
+  - "默认搜索"
+
+# AI 配置（留空则复用 boss ai config）
+ai:
+  matching:
+    provider: ""
+    model: ""
+    base_url: ""
+    api_key: ""
+  reply:
+    provider: ""
+    model: ""
+    base_url: ""
+    api_key: ""
+
+# 匹配与投递
+match:
+  auto_apply_threshold: 75
+  suggest_threshold: 50
+
+apply:
+  max_per_day: 10
+  min_interval_sec: 90
+  max_per_company_per_week: 2
+
+# 跟进策略
+follow_up:
+  enabled: true
+  auto_reply: true
+  reply_tone: "简洁专业"
+  deep_analysis_threshold: 5
+  chase_after_days: 2
+  max_chases: 2
+  dead_after_days: 7
+  re_engage_days: 4
+
+  interview_intent_notify: true
+  interview_keywords:
+    - "面试"
+    - "面谈"
+    - "约个时间"
+    - "到岗"
+    - "入职"
+    - "方便聊"
+
+  sensitive_topics:
+    - "薪资"
+    - "期望薪资"
+    - "目前薪资"
+    - "工资"
+
+# 对话管理
+conversation:
+  max_auto_reply_depth: 5
+  max_auto_reply_count: 8
+  notify_on_deep: true
+  summary_after_rounds: 8
+
+# 调度
+schedule:
+  daily_time: "08:00"
+  active_hours_start: "09:00"
+  active_hours_end: "21:00"
+  poll_interval_minutes: 15
+  run_on_weekdays_only: true
+
+# 面试
+interview:
+  auto_detect: true
+  auto_prep_material: true
+  prep_question_count: 10
+  remind_before_days: 1
+  remind_on_day: true
+  suggest_thank_you: true
+  thank_you_after_hours: 24
+  follow_up_after_days: 3
+  mark_dead_after_days: 7
+  urgent_notify: true
+
+# 日报
+report:
+  output_dir: "~/.boss-agent/job-hunter/reports"
+
+# 隐私
+privacy:
+  mask_pii: true
+  mask_fields:
+    - name
+    - phone
+    - email
+    - wechat
+  local_model_endpoint: null
+
+# 用户偏好
+preferences:
+  company_blacklist: []
+  company_whitelist: []
+  industry_exclude: []
+  min_salary: null
+  target_cities: []
