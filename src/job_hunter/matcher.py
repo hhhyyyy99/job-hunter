@@ -1,22 +1,20 @@
 import hashlib
 import json
 import os
-import subprocess
 import time
 from pathlib import Path
 from typing import Any
 
-from job_hunter.config import JobHunterConfig
+from job_hunter.config import JobHunterConfig, run_boss
 from job_hunter.db import StateDB
 
-BOSS_CMD = "boss"
 JD_CACHE_DIR = Path.home() / ".boss-agent" / "job-hunter" / "jd_cache"
 
 
 def collect_watch_results(config: JobHunterConfig) -> list[dict[str, Any]]:
     all_jobs = []
     for preset in config.presets:
-        result = _run_boss("watch", "run", preset)
+        result = run_boss("watch", "run", preset, timeout=120)
         if result.get("ok"):
             data = result.get("data", {})
             new_items = data.get("new_items", []) if isinstance(data, dict) else []
@@ -79,7 +77,7 @@ def fetch_jd_details(jobs: list[dict[str, Any]], db: StateDB) -> list[dict[str, 
                 pass
 
         if not jd_text:
-            detail = _run_boss("detail", sid)
+            detail = run_boss("detail", sid, timeout=120)
             if detail.get("ok"):
                 jd_data = detail.get("data", {})
                 jd_text = jd_data.get("description", "") or jd_data.get("jobDescription", "") or json.dumps(jd_data, ensure_ascii=False)
@@ -104,7 +102,7 @@ def ai_score_jobs(jobs: list[dict[str, Any]], config: JobHunterConfig, db: State
             continue
 
         sid = job.get("security_id", "")
-        result = _run_boss("ai", "analyze-jd", jd_text, resume=config.resume)
+        result = run_boss("ai", "analyze-jd", jd_text, resume=config.resume, timeout=120)
         if result.get("ok"):
             score_data = result.get("data", {})
             job["match_score"] = score_data.get("match_score", _fallback_score(job))
@@ -198,16 +196,3 @@ def _parse_salary_min(salary_str: str) -> int:
         return int(parts[0].strip()) * 1000
     except (ValueError, IndexError):
         return 0
-
-
-def _run_boss(*args: str) -> dict[str, Any]:
-    try:
-        result = subprocess.run(
-            [BOSS_CMD, *args],
-            capture_output=True,
-            text=True,
-            timeout=120,
-        )
-        return json.loads(result.stdout) if result.stdout.strip() else {"ok": False}
-    except (subprocess.TimeoutExpired, json.JSONDecodeError, FileNotFoundError):
-        return {"ok": False}

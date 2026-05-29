@@ -1,21 +1,19 @@
 import json
 import os
 import random
-import subprocess
 import time
 from pathlib import Path
 from typing import Any
 
-from job_hunter.config import JobHunterConfig
+from job_hunter.config import JobHunterConfig, run_boss
 from job_hunter.db import StateDB
 
-BOSS_CMD = "boss"
 CONV_DIR = Path.home() / ".boss-agent" / "job-hunter" / "conversations"
 PENDING_DIR = Path.home() / ".boss-agent" / "job-hunter" / "pending_replies"
 
 
 def poll_conversations(config: JobHunterConfig, db: StateDB) -> list[dict[str, Any]]:
-    result = _run_boss("chat")
+    result = run_boss("chat")
     if not result.get("ok"):
         return []
 
@@ -173,7 +171,7 @@ def _update_state(db: StateDB, sid: str, conv: dict[str, Any], depth: int, auto_
 
 
 def _fetch_chat_history(sid: str) -> str:
-    result = _run_boss("chatmsg", sid, count=20)
+    result = run_boss("chatmsg", sid, count="20")
     if not result.get("ok"):
         return ""
     messages = result.get("data", [])
@@ -187,7 +185,7 @@ def _fetch_chat_history(sid: str) -> str:
 
 
 def _analyze_intent(last_msg: str, chat_text: str, config: JobHunterConfig, db: StateDB) -> dict[str, Any]:
-    result = _run_boss("ai", "reply", last_msg, tone=config.reply_tone)
+    result = run_boss("ai", "reply", last_msg, tone=config.reply_tone)
     if result.get("ok"):
         data = result.get("data", {})
         return {
@@ -199,7 +197,7 @@ def _analyze_intent(last_msg: str, chat_text: str, config: JobHunterConfig, db: 
 
 
 def _generate_reply(last_msg: str, chat_text: str, config: JobHunterConfig) -> str | None:
-    result = _run_boss("ai", "reply", last_msg, tone=config.reply_tone)
+    result = run_boss("ai", "reply", last_msg, tone=config.reply_tone)
     if result.get("ok"):
         drafts = result.get("data", {}).get("reply_drafts", [])
         if drafts:
@@ -208,7 +206,7 @@ def _generate_reply(last_msg: str, chat_text: str, config: JobHunterConfig) -> s
 
 
 def _send_reply(sid: str, message: str) -> dict[str, Any]:
-    return _run_boss("reply", sid, message=message)
+    return run_boss("reply", sid, message=message)
 
 
 # ── 6.8: Bridge 离线 pending 队列 ──────────────────────────────────
@@ -276,8 +274,8 @@ def _compress_context(chat_text: str, existing_summary: str, config: JobHunterCo
     prompt = "\n\n".join(prompt_lines)
 
     try:
-        from job_hunter.config import _run_boss as rb
-        result = _run_boss("ai", "analyze-jd", prompt, resume="")
+        from job_hunter.config import run_boss as rb
+        result = rb("ai", "analyze-jd", prompt, resume="")
         if result.get("ok"):
             data = result.get("data", {})
             return data.get("match_analysis", "") or data.get("summary", "")
@@ -312,7 +310,7 @@ def _generate_interview_prep(sid: str, config: JobHunterConfig, db: StateDB) -> 
     if not jd_text:
         return None
 
-    result = _run_boss("ai", "interview-prep", jd_text, count=str(config.interview_prep_question_count))
+    result = run_boss("ai", "interview-prep", jd_text, count=str(config.interview_prep_question_count))
     if result.get("ok"):
         return result.get("data", {})
     return None
@@ -327,16 +325,3 @@ def _get_cached_jd(sid: str) -> str:
         except Exception:
             pass
     return ""
-
-
-def _run_boss(*args: str) -> dict[str, Any]:
-    try:
-        result = subprocess.run(
-            [BOSS_CMD, *args],
-            capture_output=True,
-            text=True,
-            timeout=60,
-        )
-        return json.loads(result.stdout) if result.stdout.strip() else {"ok": False}
-    except (subprocess.TimeoutExpired, json.JSONDecodeError, FileNotFoundError):
-        return {"ok": False}

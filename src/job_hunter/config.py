@@ -1,4 +1,6 @@
+import json
 import os
+import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -6,6 +8,42 @@ from typing import Any
 import yaml
 
 DEFAULT_CONFIG_DIR = Path.home() / ".boss-agent" / "job-hunter"
+
+# Try "boss" first, fall back to "uv run boss" if not on PATH
+_BOSS_CMD: list[str] | None = None
+
+
+def _resolve_boss_cmd() -> list[str]:
+    global _BOSS_CMD
+    if _BOSS_CMD is not None:
+        return _BOSS_CMD
+    try:
+        subprocess.run(["boss", "--help"], capture_output=True, timeout=5)
+        _BOSS_CMD = ["boss"]
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        _BOSS_CMD = ["uv", "run", "boss"]
+    return _BOSS_CMD
+
+
+def run_boss(*args: str, timeout: int = 60, **kwargs: str) -> dict[str, Any]:
+    """Execute a boss-agent-cli command. Falls back to `uv run boss` if `boss` is not on PATH."""
+    cmd = _resolve_boss_cmd()
+    cli_args = [*cmd, *args]
+    for key, value in kwargs.items():
+        cli_args.append(f"--{key.replace('_', '-')}")
+        cli_args.append(str(value))
+    try:
+        result = subprocess.run(
+            cli_args,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+        return json.loads(result.stdout) if result.stdout.strip() else {"ok": False}
+    except FileNotFoundError:
+        return {"ok": False}
+    except (subprocess.TimeoutExpired, json.JSONDecodeError):
+        return {"ok": False}
 
 
 @dataclass

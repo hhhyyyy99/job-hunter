@@ -1,17 +1,14 @@
 import datetime
-import json
-import subprocess
 import time
 from pathlib import Path
 from typing import Any
 
 import httpx
 
-from job_hunter.config import JobHunterConfig
+from job_hunter.config import JobHunterConfig, run_boss
 from job_hunter.db import StateDB
 
 BRIDGE_URL = "http://127.0.0.1:19826"
-BOSS_CMD = "boss"
 
 
 def is_bridge_running() -> bool:
@@ -52,17 +49,17 @@ def is_daily_time_reached(config: JobHunterConfig) -> bool:
 
 
 def check_login_state() -> dict[str, Any]:
-    result = _run_boss("status")
+    result = run_boss("status")
     return result
 
 
 def check_ai_service() -> bool:
-    result = _run_boss("ai", "config")
+    result = run_boss("ai", "config")
     return result.get("ok", False) and result.get("data", {}).get("api_key_set", False)
 
 
 def try_renew_token_via_bridge() -> bool:
-    result = _run_boss("login", "--bridge")
+    result = run_boss("login", "--bridge")
     return result.get("ok", False)
 
 
@@ -117,16 +114,3 @@ def should_run_daily_pipeline(config: JobHunterConfig, db: StateDB, health: dict
         return False
 
     return True
-
-
-def _run_boss(*args: str) -> dict[str, Any]:
-    try:
-        result = subprocess.run(
-            [BOSS_CMD, *args],
-            capture_output=True,
-            text=True,
-            timeout=60,
-        )
-        return json.loads(result.stdout) if result.stdout.strip() else {"ok": False, "error": {"code": "UNKNOWN"}}
-    except (subprocess.TimeoutExpired, json.JSONDecodeError, FileNotFoundError) as e:
-        return {"ok": False, "error": {"code": "UNKNOWN", "message": str(e)}}
