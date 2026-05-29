@@ -1,6 +1,6 @@
 # job-hunter
 
-基于 [boss-agent-cli](https://github.com/can4hou6joeng4/boss-agent-cli) 的自动化求职编排引擎。
+基于 [boss-agent-cli](https://github.com/hhhyyyy99/boss-agent-cli) `feature/job-hunter` 分支（开发中）的自动化求职编排引擎。
 
 ## 快速开始
 
